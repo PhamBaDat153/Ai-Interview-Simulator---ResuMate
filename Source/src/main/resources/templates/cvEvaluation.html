@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đánh giá CV | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell">
+    <section class="page-heading">
+        <span class="eyebrow">RESUMATE AI</span>
+        <h1>Đánh giá CV</h1>
+        <p>So sánh CV với mô tả công việc và nhận đề xuất cải thiện.</p>
+    </section>
+
+    <form class="evaluation-form" method="post" enctype="multipart/form-data" th:action="@{/cv-evaluation}">
+        <p class="alert" th:if="${error}" th:text="${error}"></p>
+        <div class="form-grid">
+            <section class="input-card">
+                <div class="card-heading"><span class="card-icon">01</span><div><h2>CV của bạn</h2><p>Dán nội dung hoặc tải CV lên</p></div></div>
+                <label for="cvText">Nội dung CV</label>
+                <textarea id="cvText" name="cvText" placeholder="Họ tên, kinh nghiệm, kỹ năng..." th:text="${param.cvText}"></textarea>
+                <div class="or-divider"><span>hoặc</span></div>
+                <label class="file-drop" for="cvFile" data-file-drop="cvFile">
+                    <span class="upload-icon">↑</span><strong data-file-title>+ Chọn file CV</strong>
+                    <small data-file-help>PDF hoặc DOCX · tối đa 10MB</small>
+                    <span class="file-meta" data-file-meta></span>
+                    <button class="file-remove" type="button" data-file-remove aria-label="Xóa file">×</button>
+                </label>
+                <input id="cvFile" name="cvFile" type="file" accept=".pdf,.docx">
+            </section>
+
+            <section class="input-card">
+                <div class="card-heading"><span class="card-icon">02</span><div><h2>Mô tả công việc</h2><p>Nhập yêu cầu của vị trí ứng tuyển</p></div></div>
+                <label for="jdText">Nội dung công việc</label>
+                <textarea id="jdText" name="jdText" placeholder="Tên vị trí, yêu cầu, trách nhiệm..." th:text="${param.jdText}"></textarea>
+                <div class="or-divider"><span>hoặc</span></div>
+                <label class="file-drop" for="jdFile" data-file-drop="jdFile">
+                    <span class="upload-icon">↑</span><strong data-file-title>+ Chọn file mô tả</strong>
+                    <small data-file-help>PDF hoặc DOCX · tối đa 10MB</small>
+                    <span class="file-meta" data-file-meta></span>
+                    <button class="file-remove" type="button" data-file-remove aria-label="Xóa file">×</button>
+                </label>
+                <input id="jdFile" name="jdFile" type="file" accept=".pdf,.docx">
+            </section>
+        </div>
+        <button class="primary-button submit-button" type="submit" data-submit-button>Bắt đầu đánh giá <span>→</span></button>
+    </form>
+</main>
+
+<div class="loading-overlay" data-loading-overlay aria-hidden="true">
+    <div class="loading-content" role="status" aria-live="polite">
+        <div class="loading-spinner"></div>
+        <h2>ResuMate đang phân tích CV</h2>
+        <p>Quá trình này có thể mất vài giây...</p>
+    </div>
+</div>
+
+<script>
+    const evaluationForm = document.querySelector('.evaluation-form');
+    const loadingOverlay = document.querySelector('[data-loading-overlay]');
+    const submitButton = document.querySelector('[data-submit-button]');
+
+    evaluationForm.addEventListener('submit', () => {
+        loadingOverlay.classList.add('active');
+        loadingOverlay.setAttribute('aria-hidden', 'false');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="button-spinner"></span> Đang phân tích...';
+    });
+
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        const drop = document.querySelector(`[data-file-drop="${input.id}"]`);
+        const title = drop.querySelector('[data-file-title]');
+        const help = drop.querySelector('[data-file-help]');
+        const meta = drop.querySelector('[data-file-meta]');
+        const remove = drop.querySelector('[data-file-remove]');
+
+        const formatSize = bytes => bytes < 1024 * 1024
+            ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+            : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+        const reset = event => {
+            if (event) event.preventDefault();
+            input.value = '';
+            drop.classList.remove('has-file', 'dragging');
+            title.textContent = input.id === 'cvFile' ? '+ Chọn file CV' : '+ Chọn file mô tả';
+            help.textContent = 'PDF hoặc DOCX · tối đa 10MB';
+            meta.textContent = '';
+        };
+
+        const showFile = file => {
+            if (!file) return;
+            drop.classList.add('has-file');
+            title.textContent = '✓ File đã được chọn';
+            help.textContent = file.name;
+            meta.textContent = formatSize(file.size);
+        };
+
+        input.addEventListener('change', () => showFile(input.files[0]));
+        ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => {
+            event.preventDefault(); drop.classList.add('dragging');
+        }));
+        ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => {
+            event.preventDefault(); drop.classList.remove('dragging');
+        }));
+        drop.addEventListener('drop', event => {
+            const file = event.dataTransfer.files[0];
+            if (file) { input.files = event.dataTransfer.files; showFile(file); }
+        });
+        remove.addEventListener('click', reset);
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<nav th:fragment="navbar" class="navbar">
+    <a th:href="@{/}" class="navbar-brand">ResuMate</a>
+
+    <div class="navbar-links">
+        <a th:href="@{/}" class="navbar-button">Trang chủ</a>
+        <a th:href="@{/cv-evaluation}" class="navbar-button">Đánh giá CV</a>
+        <a th:href="@{/about}" class="navbar-button">Giả lập phỏng vấn</a>
+    </div>
+</nav>
+</body>
+</html>

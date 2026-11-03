@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả đánh giá | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+<main class="page-shell result-page">
+    <section class="page-heading"><span class="eyebrow">KẾT QUẢ PHÂN TÍCH</span><h1>CV của bạn phù hợp đến mức nào?</h1><p>Đây là đánh giá được tạo dựa trên CV và mô tả công việc bạn cung cấp.</p></section>
+    <section class="score-card">
+        <div class="score-value"><strong th:text="${result.evaluationScore}">85</strong><span>/100</span></div>
+        <div class="score-info"><h2>Mức độ phù hợp</h2><p>CV có nền tảng tốt cho vị trí này.</p><div class="progress"><span th:style="'width:' + ${result.evaluationScore} + '%'" style="width:85%"></span></div></div>
+    </section>
+    <section class="summary-card"><h2>Tóm tắt đánh giá</h2><p th:text="${result.summary}">Tóm tắt kết quả đánh giá sẽ xuất hiện ở đây.</p></section>
+    <div class="result-grid">
+        <section class="result-card strengths"><h2>Điểm mạnh</h2><ul><li th:each="item : ${result.strengths}" th:text="${item}">Kinh nghiệm phù hợp</li></ul></section>
+        <section class="result-card weaknesses"><h2>Điểm cần cải thiện</h2><ul><li th:each="item : ${result.weaknesses}" th:text="${item}">Thiếu một số kỹ năng</li></ul></section>
+        <section class="result-card improvements"><h2>Đề xuất cải thiện</h2><ul><li th:each="item : ${result.improvements}" th:text="${item}">Bổ sung thành tích định lượng</li></ul></section>
+    </div>
+    <div class="result-actions"><a class="secondary-button" th:href="@{/}">Về trang chủ</a><a class="primary-button" th:href="@{/cv-evaluation}">Đánh giá CV khác <span>→</span></a></div>
+</main>
+</body>
+</html>
