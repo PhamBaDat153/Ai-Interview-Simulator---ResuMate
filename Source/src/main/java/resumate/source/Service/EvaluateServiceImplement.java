@@ -1,46 +1,29 @@
 
 package resumate.source.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import resumate.source.DTO.EvaluationRequest;
 import resumate.source.DTO.EvaluationResponse;
-import resumate.source.Ultilities.TextExtractor;
+import resumate.source.DTO.GeminiMessage;
 
-import java.util.Map;
-import java.util.Locale;
+import java.util.List;
 
 @Service
 public class EvaluateServiceImplement implements EvaluateService {
 
-    private final RestClient client;
-    private final ObjectMapper mapper;
-    private final String apiKey;
-    private final String model;
+    private final GeminiClient geminiClient;
+    private final DocumentInputService documentInputService;
 
     /**
-     * Khởi tạo các thành phần cần thiết để kết nối
+     * Khởi tạo các thành phần cần thiết để lấy nội dung CV/JD
      * và gửi yêu cầu đánh giá CV đến Gemini API.
      */
     public EvaluateServiceImplement(
-            RestClient.Builder builder,
-            ObjectMapper mapper,
-            @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model}") String model) {
+            GeminiClient geminiClient,
+            DocumentInputService documentInputService) {
 
-        // Cấu hình địa chỉ cơ sở để RestClient gửi yêu cầu đến Gemini API.
-        this.client = builder
-                .baseUrl("https://generativelanguage.googleapis.com")
-                .build();
-
-        // Sử dụng các đối tượng và thông tin cấu hình được Spring truyền vào.
-        this.mapper = mapper;
-        this.apiKey = apiKey;
-        this.model = model;
+        this.geminiClient = geminiClient;
+        this.documentInputService = documentInputService;
     }
 
     /**
@@ -57,62 +40,17 @@ public class EvaluateServiceImplement implements EvaluateService {
                     "Yêu cầu đánh giá không được để trống");
         }
 
-        // Xác định CV có nội dung văn bản hợp lệ được nhập trực tiếp hay không.
-        boolean hasCvText = request.getCvText() != null
-                && !request.getCvText().isBlank();
+        // Dừng xử lý nếu người dùng không cung cấp CV hoặc JD dưới bất kỳ hình thức nào.
+        documentInputService.requireProvided(
+                request.getCvText(), request.getCvFile(), "CV");
+        documentInputService.requireProvided(
+                request.getJdText(), request.getJdFile(), "Mô tả công việc");
 
-        // Kiểm tra CV có được cung cấp dưới dạng file và file có dữ liệu hay không.
-        boolean hasCvFile = request.getCvFile() != null
-                && !request.getCvFile().isEmpty();
-
-        // Dừng xử lý nếu người dùng không cung cấp CV dưới bất kỳ hình thức nào.
-        if (!hasCvText && !hasCvFile) {
-            throw new IllegalArgumentException(
-                    "CV không được để trống");
-        }
-
-        // Xác định JD có nội dung văn bản hợp lệ được nhập trực tiếp hay không.
-        boolean hasJdText = request.getJdText() != null
-                && !request.getJdText().isBlank();
-
-        // Kiểm tra JD có được cung cấp dưới dạng file và file có dữ liệu hay không.
-        boolean hasJdFile = request.getJdFile() != null
-                && !request.getJdFile().isEmpty();
-
-        // Dừng xử lý nếu người dùng chưa cung cấp mô tả công việc.
-        if (!hasJdText && !hasJdFile) {
-            throw new IllegalArgumentException(
-                    "Mô tả công việc không được để trống");
-        }
-
-        // Lấy nội dung CV từ văn bản nhập trực tiếp hoặc trích xuất từ file đã tải lên.
-        String cv;
-
-        if (hasCvText) {
-            cv = request.getCvText();
-        } else {
-            cv = extractFileContent(request.getCvFile());
-        }
-
-        // Lấy nội dung JD theo hình thức mà người dùng đã cung cấp.
-        String jd;
-
-        if (hasJdText) {
-            jd = request.getJdText();
-        } else {
-            jd = extractFileContent(request.getJdFile());
-        }
-
-        // Kiểm tra kết quả trích xuất để tránh gửi nội dung rỗng đến Gemini API.
-        if (cv == null || cv.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Không thể trích xuất nội dung từ CV");
-        }
-
-        if (jd == null || jd.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Không thể trích xuất nội dung từ Job Description");
-        }
+        // Lấy nội dung CV/JD từ văn bản nhập trực tiếp hoặc trích xuất từ file đã tải lên.
+        String cv = documentInputService.resolve(
+                request.getCvText(), request.getCvFile(), "CV");
+        String jd = documentInputService.resolve(
+                request.getJdText(), request.getJdFile(), "Job Description");
 
         // Tạo prompt chứa yêu cầu đánh giá, định dạng JSON mong muốn,
         // nội dung CV và mô tả công việc để gửi cho Gemini.
@@ -277,100 +215,11 @@ public class EvaluateServiceImplement implements EvaluateService {
         """.formatted(cv, jd);
 
 
-        // Gửi prompt đến Gemini API và yêu cầu kết quả trả về ở định dạng JSON.
-        String raw = client.post()
-                .uri("/v1beta/models/{model}:generateContent?key={key}",
-                        model, apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                        "contents", new Object[]{
-                                Map.of("parts", new Object[]{
-                                        Map.of("text", prompt)
-                                })
-                        },
-                        "generationConfig", Map.of(
-                                "responseMimeType", "application/json"
-                        )
-                ))
-                .retrieve()
-                .body(String.class);
-
-        // Đọc dữ liệu JSON từ Gemini và chuyển nội dung đánh giá
-        // thành đối tượng EvaluationResponse để trả về cho tầng xử lý tiếp theo.
-        try {
-            // Kiểm tra phản hồi có chứa dữ liệu hay không trước khi phân tích JSON.
-            if (raw == null || raw.isBlank()) {
-                throw new IllegalStateException(
-                        "Gemini không trả về dữ liệu");
-            }
-
-            // Chuyển chuỗi JSON phản hồi thành cây dữ liệu JsonNode.
-            JsonNode response = mapper.readTree(raw);
-
-            // Lấy nội dung đánh giá do Gemini tạo ra trong phần candidates.
-            JsonNode textNode = response.at(
-                    "/candidates/0/content/parts/0/text");
-
-            // Kiểm tra đường dẫn chứa nội dung đánh giá có tồn tại hay không.
-            if (textNode.isMissingNode() || textNode.isNull()) {
-                throw new IllegalStateException(
-                        "Gemini không trả về nội dung đánh giá hợp lệ: "
-                                + raw);
-            }
-
-            // Lấy chuỗi JSON chứa kết quả đánh giá từ phản hồi của Gemini.
-            String json = textNode.asText();
-
-            // Chuyển JSON thành EvaluationResponse và trả kết quả cho nơi gọi phương thức.
-            return mapper.readValue(json, EvaluationResponse.class);
-
-        } catch (Exception exception) {
-            // Thông báo lỗi nếu phản hồi từ Gemini không thể phân tích
-            // hoặc không đúng định dạng mà hệ thống mong đợi.
-            throw new IllegalStateException(
-                    "Gemini trả về dữ liệu không đúng định dạng",
-                    exception);
-        }
-    }
-
-    /**
-     * Trích xuất nội dung văn bản từ file PDF hoặc DOCX
-     * dựa trên phần mở rộng của tên file.
-     */
-    private String extractFileContent(
-            org.springframework.web.multipart.MultipartFile file) {
-
-        // Kiểm tra file có tồn tại và chứa dữ liệu trước khi đọc.
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "File không được để trống");
-        }
-
-        // Lấy tên file để xác định định dạng cần xử lý.
-        String filename = file.getOriginalFilename();
-
-        // Từ chối file nếu không có tên hợp lệ.
-        if (filename == null || filename.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Tên file không hợp lệ");
-        }
-
-        // Chuyển tên file về chữ thường để việc kiểm tra phần mở rộng
-        // không phụ thuộc vào cách viết hoa hoặc viết thường.
-        String lowerFilename = filename.toLowerCase(Locale.ROOT);
-
-        // Nếu là PDF, sử dụng TextExtractor để đọc nội dung văn bản từ file.
-        if (lowerFilename.endsWith(".pdf")) {
-            return TextExtractor.extractTextFromPdf(file);
-        }
-
-        // Nếu là DOCX, sử dụng phương thức trích xuất dành riêng cho Word.
-        if (lowerFilename.endsWith(".docx")) {
-            return TextExtractor.extractTextFromDocx(file);
-        }
-
-        // Từ chối các định dạng file không được hệ thống hỗ trợ.
-        throw new IllegalArgumentException(
-                "Chỉ hỗ trợ file PDF và DOCX");
+        // Gửi prompt đến Gemini API, yêu cầu kết quả JSON
+        // và chuyển thành đối tượng EvaluationResponse.
+        return geminiClient.generateJson(
+                null,
+                List.of(GeminiMessage.user(prompt)),
+                EvaluationResponse.class);
     }
 }

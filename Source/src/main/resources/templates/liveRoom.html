@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng phỏng vấn | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell room-shell" data-live-room
+      th:with="config=${interview.config}"
+      th:data-api-base="@{/api/interview/live/{id}(id=${interview.id})}"
+      th:data-report-url="@{/interview/live/{id}/report(id=${interview.id})}"
+      th:data-interview-id="${interview.id}"
+      th:data-total="${interview.plan.questions.size()}"
+      th:data-duration="${config.durationMinutes * 60}"
+      th:data-question-ids="${questionIds}"
+      th:data-kickoff-text="${kickoffText}"
+      th:data-one-minute-text="${oneMinuteText}"
+      th:data-resume-text="${resumeText}">
+
+    <section class="room-header">
+        <div>
+            <span class="eyebrow">PHỎNG VẤN TRỰC TIẾP</span>
+            <h1 th:text="${interview.plan.position}">Backend Developer</h1>
+            <p class="room-subtitle" th:text="${config.level.label + ' · ' + config.interviewType.label + ' · ' + config.mode.label}">Junior · Kết hợp · Nhắn tin</p>
+        </div>
+        <div class="room-stats">
+            <div class="room-stat">
+                <span>Tiến độ</span>
+                <strong data-progress th:text="${'Câu 0/' + interview.plan.questions.size()}">Câu 0/5</strong>
+            </div>
+            <div class="room-stat" data-timer-box>
+                <span>Thời gian còn lại</span>
+                <strong data-timer th:text="${config.durationMinutes + ':00'}">10:00</strong>
+            </div>
+            <div class="room-stat" th:if="${config.mode.name() == 'VOICE'}">
+                <span>Kết nối</span>
+                <strong class="connection-status" data-connection-status data-tone="idle">Chưa kết nối</strong>
+            </div>
+            <button class="secondary-button end-button" type="button" data-end-button disabled>Kết thúc</button>
+        </div>
+    </section>
+
+    <div class="alert room-alert" data-error role="alert" hidden>
+        <span data-error-text></span>
+        <button class="link-button" type="button" data-retry-button hidden>Thử lại</button>
+    </div>
+
+    <!-- Chế độ nhắn tin -->
+    <th:block th:if="${config.mode.name() == 'TEXT'}">
+        <section class="chat-card">
+            <div class="chat-log" data-chat-log aria-live="polite">
+                <p class="chat-empty" data-chat-empty>Đang kết nối với người phỏng vấn...</p>
+            </div>
+            <div class="typing-indicator" data-typing hidden>
+                <span class="typing-dots"><i></i><i></i><i></i></span>
+                Người phỏng vấn đang soạn câu trả lời...
+            </div>
+            <form class="chat-form" data-chat-form>
+                <label class="visually-hidden" for="chatInput">Câu trả lời của bạn</label>
+                <textarea id="chatInput" data-chat-input rows="3" maxlength="4000" disabled
+                          placeholder="Nhập câu trả lời... (Enter để gửi, Shift + Enter để xuống dòng)"></textarea>
+                <button class="primary-button" type="submit" data-send-button disabled>Gửi <span>→</span></button>
+            </form>
+        </section>
+    </th:block>
+
+    <!-- Chế độ giọng nói -->
+    <th:block th:if="${config.mode.name() == 'VOICE'}">
+        <section class="voice-stage">
+            <div class="voice-start" data-voice-start>
+                <h2>Sẵn sàng vào phòng?</h2>
+                <p>Trình duyệt sẽ xin quyền sử dụng micro. Người phỏng vấn AI sẽ chào và bắt đầu đặt câu hỏi ngay sau khi kết nối.</p>
+                <button class="primary-button" type="button" data-voice-start-button>Vào phỏng vấn</button>
+            </div>
+
+            <div class="voice-live" data-voice-live hidden>
+                <div class="interviewer-avatar" data-avatar><span>AI</span></div>
+                <p class="interviewer-state" data-interviewer-state>Đang kết nối...</p>
+                <div class="mic-meter voice-mic" aria-hidden="true"><span data-mic-level></span></div>
+                <div class="voice-controls">
+                    <button class="secondary-button" type="button" data-mute-button>Tắt micro</button>
+                    <button class="secondary-button" type="button" data-captions-button aria-pressed="true">Ẩn phụ đề</button>
+                </div>
+            </div>
+
+            <div class="voice-unsupported" data-voice-unsupported hidden>
+                <h2>Không thể dùng micro</h2>
+                <p data-unsupported-text></p>
+                <form method="post" th:action="@{/interview/live/{id}/use-text(id=${interview.id})}">
+                    <button class="primary-button" type="submit">Chuyển sang nhắn tin <span>→</span></button>
+                </form>
+            </div>
+        </section>
+
+        <section class="captions-card" data-captions-panel hidden>
+            <h2>Phụ đề trực tiếp</h2>
+            <div class="caption-log" data-caption-log aria-live="polite"></div>
+        </section>
+    </th:block>
+</main>
+
+<div class="loading-overlay" data-ending-overlay aria-hidden="true">
+    <div class="loading-content" role="status" aria-live="polite">
+        <div class="loading-spinner"></div>
+        <h2>Buổi phỏng vấn đã kết thúc</h2>
+        <p>ResuMate đang chấm điểm và tạo báo cáo, quá trình này có thể mất 10-30 giây...</p>
+    </div>
+</div>
+
+<script type="module" th:if="${interview.config.mode.name() == 'TEXT'}"
+        th:src="@{/js/live-text.js}" src="/static/js/live-text.js"></script>
+<script type="module" th:if="${interview.config.mode.name() == 'VOICE'}"
+        th:src="@{/js/live-voice.js}" src="/static/js/live-voice.js"></script>
+</body>
+</html>

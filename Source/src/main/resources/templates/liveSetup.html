@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thiết lập phỏng vấn | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell">
+    <section class="page-heading">
+        <span class="eyebrow">PHỎNG VẤN TRỰC TIẾP</span>
+        <h1>Thiết lập buổi phỏng vấn</h1>
+        <p>Cung cấp CV, mô tả công việc và chọn cấu hình. Người phỏng vấn AI sẽ đặt câu hỏi dựa trên chính hồ sơ của bạn.</p>
+    </section>
+
+    <form class="evaluation-form live-setup-form" method="post" enctype="multipart/form-data"
+          th:action="@{/interview/live/setup}" th:object="${form}">
+        <p class="alert" th:if="${error}" th:text="${error}" role="alert"></p>
+
+        <div class="form-grid">
+            <section class="input-card">
+                <div class="card-heading"><span class="card-icon">01</span><div><h2>CV của bạn</h2><p>Dán nội dung hoặc tải CV lên</p></div></div>
+                <label for="cvText">Nội dung CV</label>
+                <textarea id="cvText" th:field="*{cvText}" maxlength="20000" data-char-limit="20000"
+                          placeholder="Họ tên, kinh nghiệm, dự án, kỹ năng..."></textarea>
+                <small class="char-counter" data-char-counter="cvText">0 / 20.000 ký tự</small>
+                <div class="or-divider"><span>hoặc</span></div>
+                <label class="file-drop" for="cvFile" data-file-drop="cvFile">
+                    <span class="upload-icon">↑</span><strong data-file-title>+ Chọn file CV</strong>
+                    <small data-file-help>PDF hoặc DOCX · tối đa 5MB</small>
+                    <span class="file-meta" data-file-meta></span>
+                    <button class="file-remove" type="button" data-file-remove aria-label="Xóa file">×</button>
+                </label>
+                <input id="cvFile" name="cvFile" type="file" accept=".pdf,.docx">
+            </section>
+
+            <section class="input-card">
+                <div class="card-heading"><span class="card-icon">02</span><div><h2>Mô tả công việc</h2><p>Yêu cầu của vị trí bạn muốn luyện tập</p></div></div>
+                <label for="jdText">Nội dung công việc</label>
+                <textarea id="jdText" th:field="*{jdText}" maxlength="20000" data-char-limit="20000"
+                          placeholder="Tên vị trí, yêu cầu, trách nhiệm..."></textarea>
+                <small class="char-counter" data-char-counter="jdText">0 / 20.000 ký tự</small>
+                <div class="or-divider"><span>hoặc</span></div>
+                <label class="file-drop" for="jdFile" data-file-drop="jdFile">
+                    <span class="upload-icon">↑</span><strong data-file-title>+ Chọn file mô tả</strong>
+                    <small data-file-help>PDF hoặc DOCX · tối đa 5MB</small>
+                    <span class="file-meta" data-file-meta></span>
+                    <button class="file-remove" type="button" data-file-remove aria-label="Xóa file">×</button>
+                </label>
+                <input id="jdFile" name="jdFile" type="file" accept=".pdf,.docx">
+            </section>
+        </div>
+
+        <section class="input-card config-card">
+            <div class="card-heading"><span class="card-icon">03</span><div><h2>Cấu hình buổi phỏng vấn</h2><p>Điều chỉnh cho giống với buổi phỏng vấn bạn sắp tham gia</p></div></div>
+
+            <div class="field field-wide">
+                <span class="field-label">Hình thức</span>
+                <div class="mode-options">
+                    <label class="mode-option" th:each="m : ${modes}">
+                        <input type="radio" th:field="*{mode}" th:value="${m}" data-mode-input>
+                        <span class="mode-title" th:text="${m.label}">Giọng nói</span>
+                        <small th:text="${m.name() == 'VOICE'
+                                ? 'Trò chuyện bằng micro như một buổi phỏng vấn thật, có phụ đề trực tiếp.'
+                                : 'Trả lời bằng cách nhắn tin, phù hợp khi không tiện dùng micro.'}">Mô tả</small>
+                    </label>
+                </div>
+            </div>
+
+            <div class="config-grid">
+                <div class="field field-span-2">
+                    <label for="targetPosition">Vị trí ứng tuyển <span class="optional">(không bắt buộc)</span></label>
+                    <input id="targetPosition" type="text" th:field="*{targetPosition}" maxlength="120"
+                           placeholder="Để trống để AI tự xác định từ mô tả công việc">
+                </div>
+
+                <div class="field">
+                    <label for="level">Cấp độ</label>
+                    <select id="level" th:field="*{level}">
+                        <option th:each="o : ${levels}" th:value="${o}" th:text="${o.label}">Junior</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="interviewType">Loại phỏng vấn</label>
+                    <select id="interviewType" th:field="*{interviewType}">
+                        <option th:each="o : ${interviewTypes}" th:value="${o}" th:text="${o.label}">Kết hợp</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="difficulty">Độ khó</label>
+                    <select id="difficulty" th:field="*{difficulty}">
+                        <option th:each="o : ${difficulties}" th:value="${o}" th:text="${o.label}">Trung bình</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="questionCount">Số câu hỏi</label>
+                    <select id="questionCount" th:field="*{questionCount}">
+                        <option th:each="n : ${#numbers.sequence(minQuestions, maxQuestions)}"
+                                th:value="${n}" th:text="${n + ' câu'}">5 câu</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="durationMinutes">Thời lượng</label>
+                    <select id="durationMinutes" th:field="*{durationMinutes}">
+                        <option th:each="d : ${durations}" th:value="${d}" th:text="${d + ' phút'}">10 phút</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="language">Ngôn ngữ</label>
+                    <select id="language" th:field="*{language}">
+                        <option th:each="o : ${languages}" th:value="${o}" th:text="${o.label}">Tiếng Việt</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="persona">Phong cách người phỏng vấn</label>
+                    <select id="persona" th:field="*{persona}">
+                        <option th:each="o : ${personas}" th:value="${o}" th:text="${o.label}">Thân thiện</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="maxFollowUps">Câu hỏi đào sâu tối đa</label>
+                    <select id="maxFollowUps" th:field="*{maxFollowUps}">
+                        <option th:each="n : ${#numbers.sequence(0, maxFollowUps)}" th:value="${n}"
+                                th:text="${n == 0 ? 'Không hỏi thêm' : n + ' câu cho mỗi câu hỏi'}">1</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="feedbackTiming">Nhận xét</label>
+                    <select id="feedbackTiming" th:field="*{feedbackTiming}">
+                        <option th:each="o : ${feedbackTimings}" th:value="${o}" th:text="${o.label}">Chỉ nhận xét khi kết thúc</option>
+                    </select>
+                </div>
+
+                <div class="field" data-voice-field>
+                    <label for="voiceName">Giọng đọc</label>
+                    <select id="voiceName" th:field="*{voiceName}">
+                        <option value="">Mặc định</option>
+                        <option th:each="v : ${voices}" th:value="${v}" th:text="${v}">Kore</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <button class="primary-button submit-button" type="submit" data-submit-button>Tạo buổi phỏng vấn <span>→</span></button>
+    </form>
+</main>
+
+<div class="loading-overlay" data-loading-overlay aria-hidden="true">
+    <div class="loading-content" role="status" aria-live="polite">
+        <div class="loading-spinner"></div>
+        <h2>ResuMate đang chuẩn bị câu hỏi</h2>
+        <p>AI đang đọc CV và mô tả công việc của bạn...</p>
+    </div>
+</div>
+
+<script type="module" th:src="@{/js/live-setup.js}" src="/static/js/live-setup.js"></script>
+</body>
+</html>

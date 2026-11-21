@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng chờ phỏng vấn | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell" th:with="config=${interview.config}, plan=${interview.plan}">
+    <section class="page-heading">
+        <span class="eyebrow">PHÒNG CHỜ</span>
+        <h1>Bạn đã sẵn sàng?</h1>
+        <p>Câu hỏi đã được chuẩn bị riêng cho hồ sơ của bạn. Hãy kiểm tra lại cấu hình trước khi bắt đầu.</p>
+    </section>
+
+    <div class="lobby-grid">
+        <section class="summary-card lobby-card">
+            <span class="position-badge" th:text="${config.level.label}">Junior</span>
+            <h2 class="lobby-position" th:text="${plan.position}">Backend Developer</h2>
+            <p th:if="${!#strings.isEmpty(plan.candidateSummary)}" th:text="${plan.candidateSummary}">Tóm tắt hồ sơ ứng viên.</p>
+
+            <dl class="settings-list">
+                <div><dt>Hình thức</dt><dd th:text="${config.mode.label}">Giọng nói</dd></div>
+                <div><dt>Loại phỏng vấn</dt><dd th:text="${config.interviewType.label}">Kết hợp</dd></div>
+                <div><dt>Số câu hỏi</dt><dd th:text="${config.questionCount + ' câu'}">5 câu</dd></div>
+                <div><dt>Thời lượng</dt><dd th:text="${config.durationMinutes + ' phút'}">10 phút</dd></div>
+                <div><dt>Độ khó</dt><dd th:text="${config.difficulty.label}">Trung bình</dd></div>
+                <div><dt>Ngôn ngữ</dt><dd th:text="${config.language.label}">Tiếng Việt</dd></div>
+                <div><dt>Phong cách</dt><dd th:text="${config.persona.label}">Thân thiện</dd></div>
+                <div><dt>Câu hỏi đào sâu</dt><dd th:text="${config.maxFollowUps == 0 ? 'Không' : 'Tối đa ' + config.maxFollowUps}">Tối đa 1</dd></div>
+                <div><dt>Nhận xét</dt><dd th:text="${config.feedbackTiming.label}">Khi kết thúc</dd></div>
+                <div th:if="${config.mode.name() == 'VOICE'}"><dt>Giọng đọc</dt><dd th:text="${config.voiceName ?: 'Mặc định'}">Mặc định</dd></div>
+            </dl>
+        </section>
+
+        <section class="result-card lobby-card">
+            <h2>Lưu ý trước khi bắt đầu</h2>
+            <ul class="tips-list" th:if="${config.mode.name() == 'VOICE'}">
+                <li>Ngồi ở nơi yên tĩnh và nên dùng tai nghe để tránh tiếng vọng.</li>
+                <li>Trình duyệt sẽ xin quyền sử dụng micro khi bắt đầu.</li>
+                <li>Bạn có thể ngắt lời người phỏng vấn bất cứ lúc nào, giống như trò chuyện thật.</li>
+                <li>Nếu chưa nghe rõ, hãy đề nghị người phỏng vấn nhắc lại câu hỏi.</li>
+            </ul>
+            <ul class="tips-list" th:unless="${config.mode.name() == 'VOICE'}">
+                <li>Trả lời mỗi câu hỏi trong một tin nhắn, đầy đủ ý như khi nói.</li>
+                <li>Bạn có thể đề nghị người phỏng vấn giải thích lại câu hỏi.</li>
+                <li>Đồng hồ sẽ bắt đầu đếm ngược khi bạn vào phòng phỏng vấn.</li>
+            </ul>
+            <p class="lobby-note">Bạn sẽ nhận được báo cáo đánh giá chi tiết sau khi buổi phỏng vấn kết thúc.</p>
+        </section>
+    </div>
+
+    <!-- Kiểm tra micro (chỉ ở chế độ giọng nói) -->
+    <section class="summary-card mic-check" data-mic-check th:if="${config.mode.name() == 'VOICE'}">
+        <h2>Kiểm tra micro</h2>
+        <p class="mic-status" data-mic-status data-tone="idle">Nhấn "Kiểm tra micro" và nói thử vài câu để chắc chắn micro hoạt động.</p>
+        <div class="mic-meter" aria-hidden="true"><span data-mic-meter></span></div>
+        <button class="secondary-button" type="button" data-mic-test>Kiểm tra micro</button>
+        <form class="mic-fallback" method="post" data-text-fallback hidden
+              th:action="@{/interview/live/{id}/use-text(id=${interview.id})}">
+            <p>Bạn vẫn có thể luyện tập với cùng bộ câu hỏi bằng hình thức nhắn tin.</p>
+            <button class="primary-button" type="submit">Chuyển sang nhắn tin <span>→</span></button>
+        </form>
+    </section>
+
+    <div class="result-actions">
+        <a class="secondary-button" th:href="@{/interview/live/setup}">Thiết lập lại</a>
+        <a class="primary-button" data-start-link th:href="@{/interview/live/{id}/room(id=${interview.id})}">Bắt đầu phỏng vấn <span>→</span></a>
+    </div>
+</main>
+
+<script type="module" th:if="${interview.config.mode.name() == 'VOICE'}"
+        th:src="@{/js/live-lobby.js}" src="/static/js/live-lobby.js"></script>
+
+</body>
+</html>

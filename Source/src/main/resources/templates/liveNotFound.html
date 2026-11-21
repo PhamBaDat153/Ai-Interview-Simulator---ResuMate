@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Không tìm thấy buổi phỏng vấn | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell">
+    <section class="page-heading">
+        <span class="eyebrow">PHỎNG VẤN TRỰC TIẾP</span>
+        <h1>Không tìm thấy buổi phỏng vấn</h1>
+        <p>Buổi phỏng vấn không tồn tại, đã hết hạn, hoặc được tạo từ một phiên trình duyệt khác.</p>
+    </section>
+    <a class="primary-button" th:href="@{/interview/live/setup}">Tạo buổi phỏng vấn mới <span>→</span></a>
+</main>
+
+</body>
+</html>

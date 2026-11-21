@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo phỏng vấn | ResuMate</title>
+    <link rel="stylesheet" th:href="@{/stye.css}" href="/static/stye.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/navbar :: navbar}"></header>
+
+<main class="page-shell result-page report-page"
+      th:with="report=${view.report}, metrics=${view.metrics}, config=${interview.config}">
+
+    <section class="page-heading">
+        <span class="eyebrow">BÁO CÁO PHỎNG VẤN</span>
+        <h1 th:text="${interview.plan.position}">Backend Developer</h1>
+        <p th:text="${config.level.label + ' · ' + config.interviewType.label + ' · ' + config.mode.label + ' · ' + interviewDate}">
+            Junior · Kết hợp · Nhắn tin · 21:00 ngày 21/11/2026
+        </p>
+    </section>
+
+    <!-- Tạo báo cáo lỗi -->
+    <div class="alert room-alert" th:if="${error}" role="alert">
+        <span th:text="${error}">Dịch vụ AI tạm thời không phản hồi.</span>
+        <a class="link-button" th:href="@{/interview/live/{id}/report(id=${interview.id})}">Thử lại</a>
+    </div>
+
+    <!-- Chưa đủ dữ liệu -->
+    <section class="summary-card insufficient-card" th:if="${view.insufficientData}">
+        <h2>Chưa đủ dữ liệu để đánh giá</h2>
+        <p>Buổi phỏng vấn kết thúc khi bạn mới trả lời rất ít, nên ResuMate chưa thể chấm điểm một cách công bằng.
+            Hãy thử lại và trả lời ít nhất vài câu hỏi để nhận báo cáo chi tiết.</p>
+    </section>
+
+    <th:block th:if="${report != null}">
+        <!-- Điểm tổng và kết luận -->
+        <section class="score-card report-score">
+            <div class="score-value"><strong th:text="${report.overallScore}">78</strong><span>/100</span></div>
+            <div class="score-info">
+                <span class="verdict-badge" th:text="${report.verdict.label}"
+                      th:classappend="${'verdict-' + #strings.toLowerCase(report.verdict.name())}">Nên tuyển</span>
+                <p th:text="${report.summary}">Tóm tắt đánh giá.</p>
+                <div class="progress"><span th:style="'width:' + ${report.overallScore} + '%'" style="width:78%"></span></div>
+            </div>
+        </section>
+    </th:block>
+
+    <!-- Chỉ số do hệ thống tính -->
+    <section class="metrics-grid" aria-label="Chỉ số buổi phỏng vấn">
+        <div class="metric-tile"><span>Thời lượng</span><strong th:text="${metrics.durationText}">8:42</strong></div>
+        <div class="metric-tile"><span>Số lượt trả lời</span><strong th:text="${metrics.candidateTurns}">9</strong></div>
+        <div class="metric-tile"><span>Tổng số từ của bạn</span><strong th:text="${metrics.candidateWords}">640</strong></div>
+        <div class="metric-tile"><span>Độ dài TB mỗi câu</span><strong th:text="${metrics.averageAnswerWords + ' từ'}">71 từ</strong></div>
+        <div class="metric-tile"><span>Tỷ lệ bạn nói</span><strong th:text="${metrics.speakingSharePercent + '%'}">62%</strong></div>
+    </section>
+
+    <th:block th:if="${report != null}">
+        <!-- Năng lực -->
+        <section class="summary-card">
+            <h2>Đánh giá năng lực</h2>
+            <div class="competency-list">
+                <div class="competency" th:each="competency : ${report.competencies}">
+                    <div class="competency-head">
+                        <strong th:text="${competency.name}">Giao tiếp</strong>
+                        <span th:text="${competency.score + '/10'}">7/10</span>
+                    </div>
+                    <div class="progress"><span th:style="'width:' + ${competency.score * 10} + '%'" style="width:70%"></span></div>
+                    <p th:if="${!#strings.isEmpty(competency.comment)}" th:text="${competency.comment}">Nhận xét.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Điểm mạnh / cần cải thiện -->
+        <div class="result-grid report-lists">
+            <section class="result-card strengths">
+                <h2><span>✓</span>Điểm mạnh</h2>
+                <ul><li th:each="item : ${report.strengths}" th:text="${item}">Điểm mạnh</li></ul>
+            </section>
+            <section class="result-card improvements">
+                <h2><span>↗</span>Cần cải thiện</h2>
+                <ul><li th:each="item : ${report.improvements}" th:text="${item}">Đề xuất</li></ul>
+            </section>
+        </div>
+
+        <!-- Từng câu hỏi -->
+        <section class="summary-card">
+            <h2>Chi tiết từng câu hỏi</h2>
+            <details class="question-item" th:each="question, stat : ${report.questions}"
+                     th:with="unanswered=${#lists.contains(report.unansweredQuestionIds, question.questionId)}">
+                <summary>
+                    <span class="question-index" th:text="${stat.count}">1</span>
+                    <span class="question-text" th:text="${question.question}">Câu hỏi</span>
+                    <span class="question-badge unanswered" th:if="${unanswered}">Chưa trả lời</span>
+                    <span class="question-score" th:text="${question.score + '/10'}"
+                          th:classappend="${question.score >= 7 ? 'score-high' : (question.score >= 5 ? 'score-mid' : 'score-low')}">7/10</span>
+                </summary>
+                <div class="question-body">
+                    <h3>Câu trả lời của bạn</h3>
+                    <p th:text="${question.answerSummary}">Tóm tắt câu trả lời.</p>
+                    <th:block th:if="${!#strings.isEmpty(question.feedback)}">
+                        <h3>Nhận xét</h3>
+                        <p th:text="${question.feedback}">Nhận xét.</p>
+                    </th:block>
+                    <th:block th:if="${!#lists.isEmpty(question.missedPoints)}">
+                        <h3>Ý còn thiếu</h3>
+                        <ul><li th:each="point : ${question.missedPoints}" th:text="${point}">Ý còn thiếu</li></ul>
+                    </th:block>
+                    <th:block th:if="${!#strings.isEmpty(question.sampleAnswer)}">
+                        <h3>Câu trả lời gợi ý</h3>
+                        <p class="sample-answer" th:text="${question.sampleAnswer}">Câu trả lời mẫu.</p>
+                    </th:block>
+                </div>
+            </details>
+        </section>
+    </th:block>
+
+    <!-- Toàn bộ transcript -->
+    <section class="summary-card">
+        <details class="transcript-details">
+            <summary><h2>Toàn bộ nội dung buổi phỏng vấn</h2></summary>
+            <p th:if="${#lists.isEmpty(state.turns)}">Chưa có nội dung hội thoại.</p>
+            <div class="transcript-list" th:unless="${#lists.isEmpty(state.turns)}">
+                <div class="transcript-turn" th:each="turn : ${state.turns}"
+                     th:classappend="${turn.role.name() == 'CANDIDATE'} ? 'from-candidate' : 'from-interviewer'">
+                    <strong th:text="${turn.role.name() == 'CANDIDATE' ? 'Bạn' : 'Người phỏng vấn'}">Người phỏng vấn</strong>
+                    <p th:text="${turn.text}">Nội dung</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <div class="result-actions">
+        <a class="secondary-button" th:href="@{/}">Về trang chủ</a>
+        <button class="secondary-button" type="button" data-print-button th:if="${report != null}">Tải PDF</button>
+        <a class="primary-button" th:href="@{/interview/live/setup(from=${interview.id})}">Phỏng vấn lại với cấu hình này <span>→</span></a>
+    </div>
+</main>
+
+<script type="module" th:src="@{/js/live-report.js}" src="/static/js/live-report.js"></script>
+</body>
+</html>
